@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Last Earthling</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #111; 
+            font-family: 'VT323', monospace; 
+        }
+        canvas { 
+            display: block; 
+        }
+        #title { 
+            position: absolute; 
+            top: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-size: 48px; 
+            background: linear-gradient(90deg, #00f, #f0f); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            animation: glow 2s infinite alternate; 
+            z-index: 11; 
+        }
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px #00f, 0 0 20px #f0f; }
+            100% { text-shadow: 0 0 20px #00f, 0 0 30px #f0f; }
+        }
+        #introScreen, #loadingScreen { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0, 0, 0, 0.5); 
+            color: white; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 10; 
+        }
+        #introText { 
+            background: rgba(10, 10, 10, 0.9); 
+            padding: 30px; 
+            border-radius: 15px; 
+            max-width: 700px; 
+            text-align: left; 
+            font-size: 24px; 
+            line-height: 1.5; 
+            border: 2px solid; 
+            border-image: linear-gradient(45deg, #00f, #f0f) 1; 
+            animation: borderGlow 3s infinite alternate; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        @keyframes borderGlow {
+            0% { border-image: linear-gradient(45deg, #00f, #f0f) 1; }
+            100% { border-image: linear-gradient(45deg, #f0f, #00f) 1; }
+        }
+        #introText p { 
+            margin: 0; 
+            white-space: pre-wrap; 
+            text-align: center; /* Centered text for better alignment with button */
+        }
+        #continueButton { 
+            margin-top: 20px; 
+            padding: 10px 30px; 
+            background: linear-gradient(90deg, #00f, #f0f); 
+            border: none; 
+            color: white; 
+            cursor: pointer; 
+            font-size: 18px; 
+            font-family: 'VT323', monospace; 
+            border-radius: 5px; 
+            transition: transform 0.2s; 
+            display: none; /* Hidden until typing completes */
+        }
+        #continueButton:hover { 
+            transform: scale(1.1); 
+        }
+        #loadingScreen { 
+            display: none; 
+            background: #111; 
+        }
+        #loadingScreen h2 { 
+            font-size: 36px; 
+            background: linear-gradient(90deg, #00f, #f0f); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+    </style>
+</head>
+<body>
+    <div id="title">The Last Earthling</div>
+    <div id="introScreen">
+        <div id="introText">
+            <p id="textContent"></p>
+            <button id="continueButton">continue</button>
+        </div>
+    </div>
+    <div id="loadingScreen">
+        <h2>Loading...</h2>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script>
+        // Audio Setup (Royalty-Free Audio for Netlify)
+        const audioListener = new THREE.AudioListener();
+        const audio = new THREE.Audio(audioListener);
+        const audioLoader = new THREE.AudioLoader();
+        // Using a royalty-free ambient track from Free Music Archive (direct URL)
+        audioLoader.load('https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Scott_Holmes/Ambient_Sounds/Scott_Holmes_-_Ambient_Sounds_-_01_Dark_Ambient.mp3', (buffer) => {
+            audio.setBuffer(buffer);
+            audio.setLoop(true);
+            audio.setVolume(0.5);
+            audio.play();
+        }, (xhr) => {
+            console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        }, (err) => {
+            console.error('Audio load error:', err);
+        });
+
+        // Three.js Background Scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        camera.add(audioListener);
+        camera.position.set(0, 2, 10);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x202020);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0x404040, 0.5);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // Ground (Post-Apocalyptic)
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x2f2f2f });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Alien Tech Glow (Background Elements)
+        const glowGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const glowMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff });
+        for (let i = 0; i < 5; i++) {
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.set(
+                (Math.random() - 0.5) * 50,
+                1,
+                (Math.random() - 0.5) * 50
+            );
+            glow.scale.set(0.5, 0.5, 0.5);
+            scene.add(glow);
+        }
+
+        // Intro Screen Logic with Typing Effect
+        const introScreen = document.getElementById('introScreen');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const continueButton = document.getElementById('continueButton');
+        const textContent = document.getElementById('textContent');
+        let introIndex = 0;
+        const introMessages = [
+            "In a ravaged Earth overtaken by alien invaders, Max stands alone as humanity’s final survivor. /...",
+            "The ‘Collectors,’ a relentless alien race, have abducted nearly every human to Martian colonies, but Max slipped through their grasp—until now. /...",
+            "Armed with his wits, his father’s journal, and scraps of forgotten tech, Max must outsmart his pursuers, uncover the invaders’ secrets, and decide humanity’s fate: fight back or fade away /...",
+            "Hunted by advanced drones and led by the merciless Commander Zark, the aliens are closing in. /..."
+        ];
+
+        function typeText(text, callback) {
+            textContent.textContent = '';
+            let i = 0;
+            const speed = 50;
+            function type() {
+                if (i < text.length) {
+                    textContent.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    callback();
+                }
+            }
+            type();
+        }
+
+        function showMessage() {
+            if (introIndex < introMessages.length) {
+                continueButton.style.display = 'none';
+                typeText(introMessages[introIndex], () => {
+                    continueButton.style.display = 'block';
+                });
+            } else {
+                introScreen.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                setTimeout(startGame, 2000);
+            }
+        }
+
+        continueButton.addEventListener('click', () => {
+            introIndex++;
+            showMessage();
+        });
+
+        // Initial Message
+        showMessage();
+
+        // Max (Simple Placeholder)
+        const maxGeometry = new THREE.CapsuleGeometry(0.3, 1, 8, 16);
+        const maxMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 });
+        const max = new THREE.Mesh(maxGeometry, maxMaterial);
+        max.position.set(0, 1, 0);
+        scene.add(max);
+
+        // Basic Movement
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, jump = false;
+        const speed = 0.1;
+        let velocityY = 0;
+        const gravity = -0.01;
+        const jumpForce = 0.2;
+
+        document.addEventListener('keydown', (event) => {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Space': if (max.position.y <= 1) jump = true; break;
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        });
+
+        // Game Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (moveForward) max.position.z -= speed;
+            if (moveBackward) max.position.z += speed;
+            if (moveLeft) max.position.x -= speed;
+            if (moveRight) max.position.x += speed;
+
+            if (jump) {
+                velocityY = jumpForce;
+                jump = false;
+            }
+            velocityY += gravity;
+            max.position.y += velocityY;
+            if (max.position.y < 1) {
+                max.position.y = 1;
+                velocityY = 0;
+            }
+
+            camera.position.set(max.position.x, max.position.y + 2, max.position.z + 5);
+            camera.lookAt(max.position);
+
+            renderer.render(scene, camera);
+        }
+
+        function startGame() {
+            loadingScreen.style.display = 'none';
+            animate();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        renderer.setAnimationLoop(() => {
+            renderer.render(scene, camera);
+        });
+    </script>
+</body>
+</html>
